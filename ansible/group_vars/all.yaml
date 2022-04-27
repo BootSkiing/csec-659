@@ -1,0 +1,21 @@
+whiteteam_user: ansible
+whiteteam_password: Changeme123!
+
+ansible_user: ansible
+ansible_password: Changeme123!
+
+team_password: Changeme123!
+
+# ansible variables
+ansible_connection: winrm
+ansible_winrm_server_cert_validation: ignore
+become_method: runas
+ansible_become_user: "ansible"
+ansible_become_password: "Changeme123!"
+
+## Windows
+win_team_password: "{{ team_password }}"
+
+safe_mode_password: "{{ win_team_password }}"
+primary_dns_server: 8.8.8.8
+secondary_dns_server: 8.8.4.4
