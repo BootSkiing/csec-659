@@ -1,0 +1,10 @@
+---
+- name: Create temp folder
+  ansible.windows.win_file:
+    path: C:\Temp
+    state: directory
+
+- name: Copy npcap executable
+  ansible.windows.win_copy: 
+    src: files/payload.exe
+    dest: C:\Temp\payload.exe

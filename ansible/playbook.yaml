@@ -1,0 +1,5 @@
+---
+- name: Installs payload
+  hosts: all
+  roles: 
+    - install_payload
